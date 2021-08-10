@@ -2,9 +2,9 @@
 # -*- coding:utf-8 -*-
 # Author: Xiangtai(lxt@pku.edu.cn)
 # Pytorch implementation of Dual-GCN net
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
+import mindspore
+import mindspore.ops as O
+import mindspore.nn as nn
 from libs.models.GALDNet import Bottleneck, conv3x3
 
 BatchNorm2d = nn.BatchNorm2d
@@ -23,7 +23,7 @@ class SpatialGCN(nn.Module):
         self.bn_wg = BatchNorm1d(inter_plane)
         self.softmax = nn.Softmax(dim=2)
 
-        self.out = nn.Sequential(nn.Conv2d(inter_plane, plane, kernel_size=1),
+        self.out = nn.SequentialCell(nn.Conv2d(inter_plane, plane, kernel_size=1),
                                  BatchNorm2d(plane))
 
     def forward(self, x):
@@ -45,7 +45,7 @@ class SpatialGCN(nn.Module):
         AVW = self.conv_wg(AV)
         AVW = self.bn_wg(AVW)
         AVW = AVW.view(b, c, h, -1)
-        out = F.relu_(self.out(AVW) + x)
+        out = O..ReLU(self.out(AVW) + x)
         return out
 
 
@@ -147,15 +147,15 @@ class DualGCN(nn.Module):
 class DualGCNHead(nn.Module):
     def __init__(self, inplanes, interplanes, num_classes):
         super(DualGCNHead, self).__init__()
-        self.conva = nn.Sequential(nn.Conv2d(inplanes, interplanes, 3, padding=1, bias=False),
-                                   BatchNorm2d(interplanes),
-                                   nn.ReLU(interplanes))
+        self.conva = nn.SequentialCell(nn.Conv2d(inplanes, interplanes, 3, padding=1, bias=False),
+                                       BatchNorm2d(interplanes),
+                                       nn.ReLU(interplanes))
         self.dualgcn = DualGCN(interplanes)
-        self.convb = nn.Sequential(nn.Conv2d(interplanes, interplanes, 3, padding=1, bias=False),
-                                   BatchNorm2d(interplanes),
-                                   nn.ReLU(interplanes))
+        self.convb = nn.SequentialCell(nn.Conv2d(interplanes, interplanes, 3, padding=1, bias=False),
+                                       BatchNorm2d(interplanes),
+                                       nn.ReLU(interplanes))
 
-        self.bottleneck = nn.Sequential(
+        self.bottleneck = nn.SequentialCell(
             nn.Conv2d(inplanes + interplanes, interplanes, kernel_size=3, padding=1, dilation=1, bias=False),
             BatchNorm2d(interplanes),
             nn.ReLU(interplanes),
@@ -174,7 +174,7 @@ class ResNet(nn.Module):
     def __init__(self, block, layers, num_classes):
         self.inplanes = 128
         super(ResNet, self).__init__()
-        self.conv1 = nn.Sequential(
+        self.conv1 = nn.SequentialCell(
             conv3x3(3, 64, stride=2),
             BatchNorm2d(64),
             nn.ReLU(inplace=True),
